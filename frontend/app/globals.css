@@ -2,6 +2,18 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer components {
+  .input-base {
+    @apply px-4 py-2 rounded-lg border border-black/[.08] dark:border-white/[.145] bg-transparent;
+    @apply focus:outline-none focus:ring-2 focus:ring-black/10 dark:focus:ring-white/10;
+  }
+
+  .button-base {
+    @apply px-4 py-2 rounded-lg bg-black dark:bg-white text-white dark:text-black;
+    @apply disabled:opacity-50;
+  }
+}
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
@@ -18,4 +30,13 @@ body {
   color: var(--foreground);
   background: var(--background);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+@keyframes blink {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
 }

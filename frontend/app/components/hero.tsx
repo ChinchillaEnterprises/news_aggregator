@@ -15,6 +15,7 @@ export function Hero({ className }: HeroProps) {
   const [extractedData, setExtractedData] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [url, setUrl] = useState('');
+  const [description, setDescription] = useState('');
   const [browserContent, setBrowserContent] = useState<string | null>(null);
 
   const handleRender = async () => {
@@ -77,23 +78,23 @@ export function Hero({ className }: HeroProps) {
   };
 
   return (
-    <div className="w-full min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-2 gap-8">
+    <div className="mt-8 w-full min-h-screen bg-background">
+      <div className="max-w-[1800px] mx-auto px-2 py-8">
+        <div className="grid grid-cols-2 gap-12 h-[800px]">
           {/* Left Column */}
-          <div className="space-y-4">
+          <div className="space-y-4 h-full">
             <div className="flex gap-2">
               <input
                 type="text"
                 placeholder="Enter website URL"
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
-                className="flex-1 px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="flex-1 input-base"
               />
               <button
                 onClick={handleRender}
                 disabled={isRendering}
-                className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 disabled:opacity-50 border border-white"
+                className="button-base"
               >
                 {isRendering ? (
                   <Loader2 className="w-5 h-5 animate-spin" />
@@ -103,7 +104,7 @@ export function Hero({ className }: HeroProps) {
               </button>
             </div>
             
-            <div className="relative aspect-video bg-white rounded-lg border border-gray-200 overflow-hidden">
+            <div className="relative h-full bg-[#1E1E1E] rounded-lg border border-black/[.08] dark:border-white/[.145] overflow-hidden">
               {isRendering ? (
                 <div className="absolute inset-0 flex items-center justify-center bg-black/50">
                   <Loader2 className="w-8 h-8 animate-spin text-white" />
@@ -133,7 +134,6 @@ export function Hero({ className }: HeroProps) {
                 </>
               ) : (
                 <div className="absolute inset-0 flex items-center justify-center text-gray-500">
-                  Enter a URL and click Render
                 </div>
               )}
               {error && (
@@ -145,17 +145,19 @@ export function Hero({ className }: HeroProps) {
           </div>
 
           {/* Right Column */}
-          <div className="space-y-4">
+          <div className="space-y-4 h-full">
             <div className="flex gap-2">
               <input
                 type="text"
                 placeholder="Describe what data to extract (e.g., 'product prices')"
-                className="flex-1 px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                className="flex-1 input-base"
               />
               <button
                 onClick={handleExtract}
-                disabled={isExtracting}
-                className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 disabled:opacity-50 border border-white"
+                disabled={isExtracting || !url.trim() || !description.trim()}
+                className="button-base"
               >
                 {isExtracting ? (
                   <Loader2 className="w-5 h-5 animate-spin" />
