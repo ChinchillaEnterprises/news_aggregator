@@ -1,5 +1,21 @@
 'use client';
 
+import { useState } from 'react';
+
+// Icons
+const CopyIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+  </svg>
+);
+
+const CheckIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="20 6 9 17 4 12"></polyline>
+  </svg>
+);
+
 interface TerminalProps {
   content: any;
   status?: 'ready' | 'running' | 'complete';
@@ -9,6 +25,7 @@ interface TerminalProps {
 }
 
 export default function Terminal({ content, status = 'ready', phase, progress, isLoading }: TerminalProps) {
+  const [copied, setCopied] = useState(false);
   const statusMessages = {
     ready: 'Terminal ready. Click Extract to begin...',
     running: {
@@ -49,11 +66,28 @@ export default function Terminal({ content, status = 'ready', phase, progress, i
 
   return (
     <div className="w-full h-full rounded-lg border border-black/[.08] dark:border-white/[.145] overflow-hidden bg-[#1E1E1E] shadow-lg">
-      <div className={`p-6 font-mono text-sm overflow-auto h-full bg-gradient-to-b from-[#1E1E1E] to-[#252525] ${hasContent ? 'text-white/90' : 'text-white/50 italic'}`}>
+      <div className={`p-6 font-mono text-sm overflow-y-auto h-full bg-gradient-to-b from-[#1E1E1E] to-[#252525] ${hasContent ? 'text-white/90' : 'text-white/50 italic'}`}>
         <div className="space-y-4">
-          <div className={`flex items-center gap-2 ${statusColors[status]}`}>
-            <span className="animate-[blink_1s_ease-in-out_infinite]">●</span>
-            {getStatusText()}
+          <div className="flex items-center justify-between">
+            <div className={`flex items-center gap-2 ${statusColors[status]}`}>
+              <span className="animate-[blink_1s_ease-in-out_infinite]">●</span>
+              {getStatusText()}
+            </div>
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(formattedContent);
+                setCopied(true);
+                setTimeout(() => setCopied(false), 1000);
+              }}
+              className={`transition-colors p-1.5 rounded border ${
+                copied 
+                  ? 'text-green-400 border-green-700 hover:border-green-500' 
+                  : 'text-gray-400 border-gray-700 hover:border-gray-500 hover:text-white'
+              }`}
+              aria-label="Copy to clipboard"
+            >
+              {copied ? <CheckIcon /> : <CopyIcon />}
+            </button>
           </div>
           
           {status === 'running' && progress !== undefined && (
