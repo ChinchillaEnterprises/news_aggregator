@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import { Coins } from 'lucide-react';
 
-// Icons
 const CopyIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
@@ -22,9 +22,10 @@ interface TerminalProps {
   phase?: string;
   progress?: number;
   isLoading?: boolean;
+  tokenCount?: number;
 }
 
-export default function Terminal({ content, status = 'ready', phase, progress, isLoading }: TerminalProps) {
+export default function Terminal({ content, status = 'ready', phase, progress, isLoading, tokenCount }: TerminalProps) {
   const [copied, setCopied] = useState(false);
   const statusMessages = {
     ready: 'Terminal ready. Click Extract to begin...',
@@ -75,8 +76,13 @@ export default function Terminal({ content, status = 'ready', phase, progress, i
               <span className="animate-[blink_1s_ease-in-out_infinite]">●</span>
               {getStatusText()}
             </div>
-            <button
-              onClick={() => {
+            <div className="flex items-center gap-5">
+              <div className="flex items-center gap-2 text-sm">
+                <Coins className="w-6 h-6" style={{ color: '#FFD700' }} />
+                <span style={{ color: '#FFFFFF' }}>{tokenCount?.toLocaleString() || '0'}</span>
+              </div>
+              <button
+                onClick={() => {
                 navigator.clipboard.writeText(formattedContent);
                 setCopied(true);
                 setTimeout(() => setCopied(false), 1000);
@@ -89,7 +95,8 @@ export default function Terminal({ content, status = 'ready', phase, progress, i
               aria-label="Copy to clipboard"
             >
               {copied ? <CheckIcon /> : <CopyIcon />}
-            </button>
+              </button>
+            </div>
           </div>
           
           {status === 'running' && progress !== undefined && (

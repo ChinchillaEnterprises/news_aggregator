@@ -13,6 +13,7 @@ export function Hero({ className }: HeroProps) {
   const [isExtracting, setIsExtracting] = useState(false);
   const [extractionPhase, setExtractionPhase] = useState('');
   const [extractedData, setExtractedData] = useState<any>(null);
+  const [tokenCount, setTokenCount] = useState<number | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
   const [url, setUrl] = useState('');
   const [description, setDescription] = useState('');
@@ -95,6 +96,7 @@ export function Hero({ className }: HeroProps) {
       }
       
       setExtractedData(data.result);
+      setTokenCount(data.tokenCount);
     } catch (err) {
       console.error('Error extracting data:', err);
       setError(err instanceof Error ? err.message : 'An error occurred');
@@ -199,6 +201,7 @@ export function Hero({ className }: HeroProps) {
               phase={extractionPhase.toLowerCase()}
               content={extractedData || error}
               isLoading={isExtracting}
+              tokenCount={tokenCount}
             />
           </div>
         </div>

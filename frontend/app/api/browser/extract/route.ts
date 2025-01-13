@@ -25,8 +25,11 @@ export async function POST(req: Request) {
     }
 
     const data = await response.json();
-    // Pass through just the final result
-    return NextResponse.json({ result: data.result || null });
+    // Pass through the result and token count
+    return NextResponse.json({ 
+      result: data.result || null,
+      tokenCount: data.token_count || null 
+    });
   } catch (error) {
     console.error('Data extraction error:', error);
     return NextResponse.json(

@@ -18,7 +18,7 @@ app = FastAPI()
 # Add CORS middleware to allow requests from the Next.js frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3002"],  # Frontend URL
+    allow_origins=["http://localhost:3000"],  # Frontend URL
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -38,6 +38,7 @@ class ExtractRequest(BaseModel):
 class ExtractResponse(BaseModel):
     result: Any
     error: Optional[str] = None
+    token_count: Optional[int] = None
 
 @app.post("/render", response_model=RenderResponse)
 async def render_page(request: RenderRequest):
@@ -105,7 +106,10 @@ async def extract_data(request: ExtractRequest):
             if last_item.result and len(last_item.result) > 0:
                 final_result = last_item.result[-1].extracted_content
         
-        return ExtractResponse(result=final_result)
+        # Get total token count from agent if available
+        token_count = agent.token_usage.get('total_tokens') if agent.show_token_usage else None
+        
+        return ExtractResponse(result=final_result, token_count=token_count)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
