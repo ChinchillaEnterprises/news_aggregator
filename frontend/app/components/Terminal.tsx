@@ -42,7 +42,9 @@ export default function Terminal({ content, status = 'ready', phase, progress, i
   const formattedContent = content 
     ? typeof content === 'object' 
       ? JSON.stringify(content, null, 2)
-      : content
+      : typeof content === 'string' && content.trim().startsWith('{')
+        ? JSON.stringify(JSON.parse(content), null, 2)
+        : content
     : status === 'ready' 
       ? statusMessages.ready
       : status === 'running' && phase
@@ -65,8 +67,8 @@ export default function Terminal({ content, status = 'ready', phase, progress, i
   };
 
   return (
-    <div className="w-full h-full rounded-lg border border-black/[.08] dark:border-white/[.145] overflow-hidden bg-[#1E1E1E] shadow-lg">
-      <div className={`p-6 font-mono text-sm overflow-y-auto h-full bg-gradient-to-b from-[#1E1E1E] to-[#252525] ${hasContent ? 'text-white/90' : 'text-white/50 italic'}`}>
+    <div className="w-full h-full flex flex-col rounded-lg border border-black/[.08] dark:border-white/[.145] overflow-hidden bg-[#1E1E1E] shadow-lg">
+      <div className={`flex-1 p-6 font-mono text-sm overflow-y-auto bg-gradient-to-b from-[#1E1E1E] to-[#252525] ${hasContent ? 'text-white/90' : 'text-white/50 italic'}`}>
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div className={`flex items-center gap-2 ${statusColors[status]}`}>

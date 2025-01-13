@@ -60,21 +60,48 @@ export function Hero({ className }: HeroProps) {
     }
   };
 
-  const handleExtract = () => {
+  const handleExtract = async () => {
+    if (!url || !description) {
+      setError('Please enter both URL and description');
+      return;
+    }
+
     setIsExtracting(true);
-    setExtractionPhase('Initializing');
-    // TODO: Implement extraction logic
-    setTimeout(() => {
-      setExtractionPhase('Analyzing');
-      setTimeout(() => {
-        setExtractionPhase('Extracting');
-        setTimeout(() => {
-          setExtractedData({ example: 'Extracted data will appear here' });
-          setIsExtracting(false);
-          setExtractionPhase('');
-        }, 1000);
-      }, 1000);
-    }, 1000);
+    setExtractionPhase('Initializing extraction');
+    setError(null);
+    setExtractedData(null);
+
+    try {
+      console.log('Sending extraction request:', { url, description });
+      
+      const response = await fetch('/api/browser/extract', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url, description }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to extract data');
+      }
+
+      const data = await response.json();
+      console.log('Received extraction result:', data);
+      
+      if (!data.result) {
+        throw new Error('No data received from server');
+      }
+      
+      setExtractedData(data.result);
+    } catch (err) {
+      console.error('Error extracting data:', err);
+      setError(err instanceof Error ? err.message : 'An error occurred');
+    } finally {
+      setIsExtracting(false);
+      setExtractionPhase('');
+    }
   };
 
   return (
@@ -82,8 +109,8 @@ export function Hero({ className }: HeroProps) {
       <div className="max-w-[1800px] mx-auto px-2 py-8">
         <div className="grid grid-cols-2 gap-12 h-[800px]">
           {/* Left Column */}
-          <div className="space-y-4 h-full">
-            <div className="flex gap-2">
+          <div className="flex flex-col h-full">
+            <div className="flex gap-2 mb-4">
               <input
                 type="text"
                 placeholder="Enter website URL"
@@ -104,7 +131,7 @@ export function Hero({ className }: HeroProps) {
               </button>
             </div>
             
-            <div className="relative h-full bg-[#1E1E1E] rounded-lg border border-black/[.08] dark:border-white/[.145] overflow-hidden">
+            <div className="relative flex-1 bg-[#1E1E1E] rounded-lg border border-black/[.08] dark:border-white/[.145] overflow-hidden">
               {isRendering ? (
                 <div className="absolute inset-0 flex items-center justify-center bg-black/50">
                   <Loader2 className="w-8 h-8 animate-spin text-white" />
@@ -113,7 +140,7 @@ export function Hero({ className }: HeroProps) {
                 <>
                   <iframe
                     srcDoc={browserContent}
-                    className="w-full h-full"
+                    className="w-full h-full overflow-y-auto"
                     sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
                     style={{ width: '100%', height: '100%', border: 'none' }}
                     title="Browser Content"
@@ -145,8 +172,8 @@ export function Hero({ className }: HeroProps) {
           </div>
 
           {/* Right Column */}
-          <div className="space-y-4 h-full">
-            <div className="flex gap-2">
+          <div className="flex flex-col h-full">
+            <div className="flex gap-2 mb-4">
               <input
                 type="text"
                 placeholder="Describe what data to extract (e.g., 'product prices')"
