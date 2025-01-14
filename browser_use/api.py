@@ -89,7 +89,7 @@ async def extract_data(request: ExtractRequest):
         
         # Initialize the agent with the task and headless browser
         agent = Agent(
-            task=f"Go to {request.url} and {request.description}",
+            task=f"Go to {request.url} and {request.description}, output should just be in .json; any content unrelated to the direct answer is not required",
             llm=ChatAnthropic(model_name='claude-3-5-sonnet-20240620', timeout=25, stop=None),
             browser=browser
         )

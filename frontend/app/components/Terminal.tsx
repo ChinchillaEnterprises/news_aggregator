@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Coins } from 'lucide-react';
 
 const CopyIcon = () => (
@@ -27,6 +27,18 @@ interface TerminalProps {
 
 export default function Terminal({ content, status = 'ready', phase, progress, isLoading, tokenCount }: TerminalProps) {
   const [copied, setCopied] = useState(false);
+  const [tokenBalance, setTokenBalance] = useState(50000); // Initialize with 50,000 tokens
+
+  // Update token balance when tokenCount changes
+  useEffect(() => {
+    if (tokenCount && tokenCount > 0) {
+      setTokenBalance(prevBalance => {
+        const newBalance = Math.max(0, prevBalance - tokenCount);
+        return newBalance;
+      });
+    }
+  }, [tokenCount]);
+  
   const statusMessages = {
     ready: 'Terminal ready. Click Extract to begin...',
     running: {
@@ -68,7 +80,7 @@ export default function Terminal({ content, status = 'ready', phase, progress, i
   };
 
   return (
-    <div className="w-full h-full flex flex-col rounded-lg border border-black/[.08] dark:border-white/[.145] overflow-hidden bg-[#1E1E1E] shadow-lg">
+    <div className="w-[88vh] h-[80vh] flex flex-col rounded-lg border border-black/[.08] dark:border-white/[.145] overflow-hidden bg-[#1E1E1E] shadow-lg">
       <div className={`flex-1 p-6 font-mono text-sm overflow-y-auto bg-gradient-to-b from-[#1E1E1E] to-[#252525] ${hasContent ? 'text-white/90' : 'text-white/50 italic'}`}>
         <div className="space-y-4">
           <div className="flex items-center justify-between">
@@ -79,7 +91,7 @@ export default function Terminal({ content, status = 'ready', phase, progress, i
             <div className="flex items-center gap-5">
               <div className="flex items-center gap-2 text-sm">
                 <Coins className="w-6 h-6" style={{ color: '#FFD700' }} />
-                <span style={{ color: '#FFFFFF' }}>{tokenCount?.toLocaleString() || '0'}</span>
+                <span style={{ color: '#FFFFFF' }}>{tokenBalance.toLocaleString()}</span>
               </div>
               <button
                 onClick={() => {
