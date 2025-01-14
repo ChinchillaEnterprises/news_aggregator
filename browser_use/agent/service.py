@@ -2,14 +2,11 @@ from __future__ import annotations
 
 import asyncio
 import base64
-import io
 import json
 import logging
 import os
-import textwrap
 import time
 import uuid
-from io import BytesIO
 from pathlib import Path
 from typing import Any, Optional, Type, TypeVar
 
@@ -18,9 +15,9 @@ from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import (
 	BaseMessage,
 	SystemMessage,
+	AIMessage,
 )
 from openai import RateLimitError
-from PIL import Image, ImageDraw, ImageFont
 from pydantic import BaseModel, ValidationError
 
 from browser_use.agent.message_manager.service import MessageManager
@@ -71,7 +68,6 @@ class Agent:
 		system_prompt_class: Type[SystemPrompt] = SystemPrompt,
 		max_input_tokens: int = 128000,
 		validate_output: bool = False,
-		generate_gif: bool = True,
 		include_attributes: list[str] = [
 			'title',
 			'type',
@@ -86,6 +82,7 @@ class Agent:
 		],
 		max_error_length: int = 400,
 		max_actions_per_step: int = 10,
+		show_token_usage: bool = True,
 	):
 		self.agent_id = str(uuid.uuid4())  # unique identifier for the agent
 
@@ -96,7 +93,6 @@ class Agent:
 		self._last_result = None
 		self.include_attributes = include_attributes
 		self.max_error_length = max_error_length
-		self.generate_gif = generate_gif
 		# Controller setup
 		self.controller = controller
 		self.max_actions_per_step = max_actions_per_step
@@ -151,6 +147,10 @@ class Agent:
 
 		if save_conversation_path:
 			logger.info(f'Saving conversation to {save_conversation_path}')
+
+		self.show_token_usage = show_token_usage
+		if self.show_token_usage:
+			self.token_usage = {'input_tokens': 0, 'output_tokens': 0, 'total_tokens': 0}
 
 	def _setup_action_models(self) -> None:
 		"""Setup dynamic action models from controller's registry"""
@@ -267,6 +267,17 @@ class Agent:
 		response: dict[str, Any] = await structured_llm.ainvoke(input_messages)  # type: ignore
 
 		parsed: AgentOutput = response['parsed']
+
+		if self.show_token_usage:
+			raw_message: AIMessage = response['raw']
+			if raw_message is None:
+				raise ValueError(f'Could not parse response.')
+			usage_metadata = raw_message.usage_metadata
+			if usage_metadata:
+				for key in self.token_usage:
+					if key in usage_metadata:
+						self.token_usage[key] += usage_metadata[key]
+
 		# cut the number of actions to max_actions_per_step
 		parsed.action = parsed.action[: self.max_actions_per_step]
 		self._log_response(parsed)
@@ -373,8 +384,8 @@ class Agent:
 			if not self.injected_browser and self.browser:
 				await self.browser.close()
 
-			if self.generate_gif:
-				self.create_history_gif()
+			if self.show_token_usage:
+				logger.info(f'Total Token Usage: {self.token_usage}')
 
 	def _too_many_failures(self) -> bool:
 		"""Check if we should stop due to too many failures"""
@@ -560,417 +571,3 @@ class Agent:
 		if not file_path:
 			file_path = 'AgentHistory.json'
 		self.history.save_to_file(file_path)
-
-	def create_history_gif(
-		self,
-		output_path: str = 'agent_history.gif',
-		duration: int = 3000,
-		show_goals: bool = True,
-		show_task: bool = True,
-		show_logo: bool = True,
-		font_size: int = 40,
-		title_font_size: int = 56,
-		goal_font_size: int = 44,
-		margin: int = 40,
-		line_spacing: float = 1.5,
-	) -> None:
-		"""Create a GIF from the agent's history with overlaid task and goal text."""
-		if not self.history.history:
-			logger.warning('No history to create GIF from')
-			return
-
-		images = []
-
-		# Try to load nicer fonts
-		try:
-			# Try different font options in order of preference
-			font_options = ['Helvetica', 'Arial', 'DejaVuSans', 'Verdana']
-			font_loaded = False
-
-			for font_name in font_options:
-				try:
-					regular_font = ImageFont.truetype(font_name, font_size)
-					title_font = ImageFont.truetype(font_name, title_font_size)
-					goal_font = ImageFont.truetype(font_name, goal_font_size)
-					font_loaded = True
-					break
-				except OSError:
-					continue
-
-			if not font_loaded:
-				raise OSError('No preferred fonts found')
-
-		except OSError:
-			regular_font = ImageFont.load_default()
-			title_font = ImageFont.load_default()
-
-			goal_font = regular_font
-
-		# Load logo if requested
-		logo = None
-		if show_logo:
-			try:
-				logo = Image.open('./static/browser-use.png')
-				# Resize logo to be small (e.g., 40px height)
-				logo_height = 150
-				aspect_ratio = logo.width / logo.height
-				logo_width = int(logo_height * aspect_ratio)
-				logo = logo.resize((logo_width, logo_height), Image.Resampling.LANCZOS)
-			except Exception as e:
-				logger.warning(f'Could not load logo: {e}')
-
-		# Create task frame if requested
-		if show_task and self.task:
-			task_frame = self._create_task_frame(
-				self.task,
-				self.history.history[0].state.screenshot,
-				title_font,
-				regular_font,
-				logo,
-				line_spacing,
-			)
-			images.append(task_frame)
-
-		# Process each history item
-		for i, item in enumerate(self.history.history, 1):
-			if not item.state.screenshot:
-				continue
-
-			# Convert base64 screenshot to PIL Image
-			img_data = base64.b64decode(item.state.screenshot)
-			image = Image.open(io.BytesIO(img_data))
-
-			if show_goals and item.model_output:
-				image = self._add_overlay_to_image(
-					image=image,
-					step_number=i,
-					goal_text=item.model_output.current_state.next_goal,
-					regular_font=regular_font,
-					title_font=title_font,
-					margin=margin,
-					logo=logo,
-				)
-
-			images.append(image)
-
-		if images:
-			# Save the GIF
-			images[0].save(
-				output_path,
-				save_all=True,
-				append_images=images[1:],
-				duration=duration,
-				loop=0,
-				optimize=False,
-			)
-			logger.info(f'Created history GIF at {output_path}')
-		else:
-			logger.warning('No images found in history to create GIF')
-
-	def _create_task_frame(
-		self,
-		task: str,
-		first_screenshot: str,
-		title_font: ImageFont.FreeTypeFont,
-		regular_font: ImageFont.FreeTypeFont,
-		logo: Optional[Image.Image] = None,
-		line_spacing: float = 1.5,
-	) -> Image.Image:
-		"""Create initial frame showing the task."""
-		img_data = base64.b64decode(first_screenshot)
-		template = Image.open(io.BytesIO(img_data))
-		image = Image.new('RGB', template.size, (0, 0, 0))
-		draw = ImageDraw.Draw(image)
-
-		# Calculate vertical center of image
-		center_y = image.height // 2
-
-		# Draw "Task:" title with larger font
-		title = 'Task:'
-		title_font_size = title_font.size + 20  # Increase title font size by 20
-		larger_title_font = ImageFont.truetype(title_font.path, title_font_size)
-		title_bbox = draw.textbbox((0, 0), title, font=larger_title_font)
-		title_width = title_bbox[2] - title_bbox[0]
-		title_x = (image.width - title_width) // 2
-		title_y = center_y - 150  # Increased spacing from center
-
-		draw.text(
-			(title_x, title_y),
-			title,
-			font=larger_title_font,
-			fill=(255, 255, 255),
-		)
-
-		# Draw task text with increased font size
-		margin = 140  # Increased margin
-		max_width = image.width - (2 * margin)
-		larger_font = ImageFont.truetype(
-			regular_font.path, regular_font.size + 16
-		)  # Increase font size more
-		wrapped_text = self._wrap_text(task, larger_font, max_width)
-
-		# Calculate line height with spacing
-		line_height = larger_font.size * line_spacing
-
-		# Split text into lines and draw with custom spacing
-		lines = wrapped_text.split('\n')
-		total_height = line_height * len(lines)
-
-		# Start position for first line
-		text_y = center_y - (total_height / 2) + 50  # Shifted down slightly
-
-		for line in lines:
-			# Get line width for centering
-			line_bbox = draw.textbbox((0, 0), line, font=larger_font)
-			text_x = (image.width - (line_bbox[2] - line_bbox[0])) // 2
-
-			draw.text(
-				(text_x, text_y),
-				line,
-				font=larger_font,
-				fill=(255, 255, 255),
-			)
-			text_y += line_height
-
-		# Add logo if provided (top right corner)
-		if logo:
-			logo_margin = 20
-			logo_x = image.width - logo.width - logo_margin
-			image.paste(logo, (logo_x, logo_margin), logo if logo.mode == 'RGBA' else None)
-
-		return image
-
-	def _add_overlay_to_image(
-		self,
-		image: Image.Image,
-		step_number: int,
-		goal_text: str,
-		regular_font: ImageFont.FreeTypeFont,
-		title_font: ImageFont.FreeTypeFont,
-		margin: int,
-		logo: Optional[Image.Image] = None,
-	) -> Image.Image:
-		"""Add step number and goal overlay to an image."""
-		image = image.convert('RGBA')
-		txt_layer = Image.new('RGBA', image.size, (0, 0, 0, 0))
-		draw = ImageDraw.Draw(txt_layer)
-
-		# Add step number (bottom left)
-		step_text = str(step_number)
-		step_bbox = draw.textbbox((0, 0), step_text, font=title_font)
-		step_width = step_bbox[2] - step_bbox[0]
-		step_height = step_bbox[3] - step_bbox[1]
-
-		# Position step number in bottom left
-		x_step = margin + 10  # Slight additional offset from edge
-		y_step = image.height - margin - step_height - 10  # Slight offset from bottom
-
-		# Draw rounded rectangle background for step number
-		padding = 20  # Increased padding
-		step_bg_bbox = (
-			x_step - padding,
-			y_step - padding,
-			x_step + step_width + padding,
-			y_step + step_height + padding,
-		)
-		draw.rounded_rectangle(
-			step_bg_bbox,
-			radius=15,  # Add rounded corners
-			fill=(0, 0, 0, 255),
-		)
-
-		# Draw step number
-		draw.text(
-			(x_step, y_step),
-			step_text,
-			font=title_font,
-			fill=(255, 255, 255, 255),
-		)
-
-		# Draw goal text (centered, bottom)
-		max_width = image.width - (4 * margin)
-		wrapped_goal = self._wrap_text(goal_text, title_font, max_width)
-		goal_bbox = draw.multiline_textbbox((0, 0), wrapped_goal, font=title_font)
-		goal_width = goal_bbox[2] - goal_bbox[0]
-		goal_height = goal_bbox[3] - goal_bbox[1]
-
-		# Center goal text horizontally, place above step number
-		x_goal = (image.width - goal_width) // 2
-		y_goal = y_step - goal_height - padding * 4  # More space between step and goal
-
-		# Draw rounded rectangle background for goal
-		padding_goal = 25  # Increased padding for goal
-		goal_bg_bbox = (
-			x_goal - padding_goal,  # Remove extra space for logo
-			y_goal - padding_goal,
-			x_goal + goal_width + padding_goal,
-			y_goal + goal_height + padding_goal,
-		)
-		draw.rounded_rectangle(
-			goal_bg_bbox,
-			radius=15,  # Add rounded corners
-			fill=(0, 0, 0, 255),
-		)
-
-		# Draw goal text
-		draw.multiline_text(
-			(x_goal, y_goal),
-			wrapped_goal,
-			font=title_font,
-			fill=(255, 255, 255, 255),
-			align='center',
-		)
-
-		# Add logo if provided (top right corner)
-		if logo:
-			logo_layer = Image.new('RGBA', image.size, (0, 0, 0, 0))
-			logo_margin = 20
-			logo_x = image.width - logo.width - logo_margin
-			logo_layer.paste(logo, (logo_x, logo_margin), logo if logo.mode == 'RGBA' else None)
-			txt_layer = Image.alpha_composite(logo_layer, txt_layer)
-
-		# Composite and convert
-		result = Image.alpha_composite(image, txt_layer)
-		return result.convert('RGB')
-
-	def _wrap_text(self, text: str, font: ImageFont.FreeTypeFont, max_width: int) -> str:
-		"""
-		Wrap text to fit within a given width.
-
-		Args:
-			text: Text to wrap
-			font: Font to use for text
-			max_width: Maximum width in pixels
-
-		Returns:
-			Wrapped text with newlines
-		"""
-		words = text.split()
-		lines = []
-		current_line = []
-
-		for word in words:
-			current_line.append(word)
-			line = ' '.join(current_line)
-			bbox = font.getbbox(line)
-			if bbox[2] > max_width:
-				if len(current_line) == 1:
-					lines.append(current_line.pop())
-				else:
-					current_line.pop()
-					lines.append(' '.join(current_line))
-					current_line = [word]
-
-		if current_line:
-			lines.append(' '.join(current_line))
-
-		return '\n'.join(lines)
-
-	def _create_frame(
-		self, screenshot: str, text: str, step_number: int, width: int = 1200, height: int = 800
-	) -> Image.Image:
-		"""Create a frame for the GIF with improved styling"""
-
-		# Create base image
-		frame = Image.new('RGB', (width, height), 'white')
-
-		# Load and resize screenshot
-		screenshot_img = Image.open(BytesIO(base64.b64decode(screenshot)))
-		screenshot_img.thumbnail((width - 40, height - 160))  # Leave space for text
-
-		# Calculate positions
-		screenshot_x = (width - screenshot_img.width) // 2
-		screenshot_y = 120  # Leave space for header
-
-		# Draw screenshot
-		frame.paste(screenshot_img, (screenshot_x, screenshot_y))
-
-		# Load browser-use logo
-		logo_size = 100  # Increased size for browser-use logo
-		logo_path = os.path.join(os.path.dirname(__file__), 'assets/browser-use-logo.png')
-		if os.path.exists(logo_path):
-			logo = Image.open(logo_path)
-			logo.thumbnail((logo_size, logo_size))
-			frame.paste(
-				logo, (width - logo_size - 20, 20), logo if 'A' in logo.getbands() else None
-			)
-
-		# Create drawing context
-		draw = ImageDraw.Draw(frame)
-
-		# Load fonts
-		try:
-			title_font = ImageFont.truetype('Arial.ttf', 36)  # Increased font size
-			text_font = ImageFont.truetype('Arial.ttf', 24)  # Increased font size
-			number_font = ImageFont.truetype('Arial.ttf', 48)  # Increased font size for step number
-		except:
-			title_font = ImageFont.load_default()
-			text_font = ImageFont.load_default()
-			number_font = ImageFont.load_default()
-
-		# Draw task text with increased spacing
-		margin = 80  # Increased margin
-		max_text_width = width - (2 * margin)
-
-		# Create rounded rectangle for goal text
-		text_padding = 20
-		text_lines = textwrap.wrap(text, width=60)
-		text_height = sum(draw.textsize(line, font=text_font)[1] for line in text_lines)
-		text_box_height = text_height + (2 * text_padding)
-
-		# Draw rounded rectangle background for goal
-		goal_bg_coords = [
-			margin - text_padding,
-			40,  # Top position
-			width - margin + text_padding,
-			40 + text_box_height,
-		]
-		draw.rounded_rectangle(
-			goal_bg_coords,
-			radius=15,  # Increased radius for more rounded corners
-			fill='#f0f0f0',
-		)
-
-		# Draw browser-use small logo in top left of goal box
-		small_logo_size = 30
-		if os.path.exists(logo_path):
-			small_logo = Image.open(logo_path)
-			small_logo.thumbnail((small_logo_size, small_logo_size))
-			frame.paste(
-				small_logo,
-				(margin - text_padding + 10, 45),  # Positioned inside goal box
-				small_logo if 'A' in small_logo.getbands() else None,
-			)
-
-		# Draw text with proper wrapping
-		y = 50  # Starting y position for text
-		for line in text_lines:
-			draw.text((margin + small_logo_size + 20, y), line, font=text_font, fill='black')
-			y += draw.textsize(line, font=text_font)[1] + 5
-
-		# Draw step number with rounded background
-		number_text = str(step_number)
-		number_size = draw.textsize(number_text, font=number_font)
-		number_padding = 20
-		number_box_width = number_size[0] + (2 * number_padding)
-		number_box_height = number_size[1] + (2 * number_padding)
-
-		# Draw rounded rectangle for step number
-		number_bg_coords = [
-			20,  # Left position
-			height - number_box_height - 20,  # Bottom position
-			20 + number_box_width,
-			height - 20,
-		]
-		draw.rounded_rectangle(
-			number_bg_coords,
-			radius=15,
-			fill='#007AFF',  # Blue background
-		)
-
-		# Center number in its background
-		number_x = number_bg_coords[0] + ((number_box_width - number_size[0]) // 2)
-		number_y = number_bg_coords[1] + ((number_box_height - number_size[1]) // 2)
-		draw.text((number_x, number_y), number_text, font=number_font, fill='white')
-
-		return frame

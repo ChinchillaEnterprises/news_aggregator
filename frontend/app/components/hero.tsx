@@ -13,6 +13,7 @@ export function Hero({ className }: HeroProps) {
   const [isExtracting, setIsExtracting] = useState(false);
   const [extractionPhase, setExtractionPhase] = useState('');
   const [extractedData, setExtractedData] = useState<any>(null);
+  const [tokenCount, setTokenCount] = useState<number | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
   const [url, setUrl] = useState('');
   const [description, setDescription] = useState('');
@@ -95,6 +96,7 @@ export function Hero({ className }: HeroProps) {
       }
       
       setExtractedData(data.result);
+      setTokenCount(data.tokenCount);
     } catch (err) {
       console.error('Error extracting data:', err);
       setError(err instanceof Error ? err.message : 'An error occurred');
@@ -107,9 +109,9 @@ export function Hero({ className }: HeroProps) {
   return (
     <div className="mt-8 w-full min-h-screen bg-background">
       <div className="max-w-[1800px] mx-auto px-2 py-8">
-        <div className="grid grid-cols-2 gap-12 h-[800px]">
+        <div className="grid grid-cols-2 gap-12">
           {/* Left Column */}
-          <div className="flex flex-col h-full">
+          <div className="w-[88vh] h-[80vh] flex flex-col">
             <div className="flex gap-2 mb-4">
               <input
                 type="text"
@@ -131,7 +133,7 @@ export function Hero({ className }: HeroProps) {
               </button>
             </div>
             
-            <div className="relative flex-1 bg-[#1E1E1E] rounded-lg border border-black/[.08] dark:border-white/[.145] overflow-hidden">
+            <div className="relative w-[88vh] h-[80vh] bg-[#1E1E1E] rounded-lg border border-black/[.08] dark:border-white/[.145] overflow-hidden">
               {isRendering ? (
                 <div className="absolute inset-0 flex items-center justify-center bg-black/50">
                   <Loader2 className="w-8 h-8 animate-spin text-white" />
@@ -172,7 +174,7 @@ export function Hero({ className }: HeroProps) {
           </div>
 
           {/* Right Column */}
-          <div className="flex flex-col h-full">
+          <div className="w-[88vh] h-[80vh] flex flex-col">
             <div className="flex gap-2 mb-4">
               <input
                 type="text"
@@ -199,6 +201,7 @@ export function Hero({ className }: HeroProps) {
               phase={extractionPhase.toLowerCase()}
               content={extractedData || error}
               isLoading={isExtracting}
+              tokenCount={tokenCount}
             />
           </div>
         </div>
