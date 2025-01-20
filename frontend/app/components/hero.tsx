@@ -4,15 +4,11 @@ import React, { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import Terminal from './Terminal';
 
-interface HeroProps {
-  className?: string;
-}
-
-export function Hero({ className }: HeroProps) {
+export function Hero() {
   const [isRendering, setIsRendering] = useState(false);
   const [isExtracting, setIsExtracting] = useState(false);
   const [extractionPhase, setExtractionPhase] = useState('');
-  const [extractedData, setExtractedData] = useState<any>(null);
+  const [extractedData, setExtractedData] = useState<string | object | null>(null);
   const [tokenCount, setTokenCount] = useState<number | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
   const [url, setUrl] = useState('');
@@ -200,7 +196,6 @@ export function Hero({ className }: HeroProps) {
               status={isExtracting ? 'running' : extractedData ? 'complete' : 'ready'}
               phase={extractionPhase.toLowerCase()}
               content={extractedData || error}
-              isLoading={isExtracting}
               tokenCount={tokenCount}
             />
           </div>

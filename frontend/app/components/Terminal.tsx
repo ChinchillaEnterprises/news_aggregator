@@ -17,7 +17,7 @@ const CheckIcon = () => (
 );
 
 interface TerminalProps {
-  content: any;
+  content: string | object | null;
   status?: 'ready' | 'running' | 'complete';
   phase?: string;
   progress?: number;
@@ -25,7 +25,7 @@ interface TerminalProps {
   tokenCount?: number;
 }
 
-export default function Terminal({ content, status = 'ready', phase, progress, isLoading, tokenCount }: TerminalProps) {
+export default function Terminal({ content, status = 'ready', phase, progress, tokenCount }: TerminalProps) {
   const [copied, setCopied] = useState(false);
   const [tokenBalance, setTokenBalance] = useState(50000); // Initialize with 50,000 tokens
 
