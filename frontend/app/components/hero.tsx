@@ -4,8 +4,6 @@ import React, { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import Terminal from './Terminal';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-
 export function Hero() {
   const [isRendering, setIsRendering] = useState(false);
   const [isExtracting, setIsExtracting] = useState(false);
@@ -32,7 +30,7 @@ export function Hero() {
       if (!url.startsWith('http://') && !url.startsWith('https://')) {
         setUrl('https://' + url);
       }
-      const response = await fetch(`${API_URL}/render`, {
+      const response = await fetch('/api/browser/render', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -73,7 +71,7 @@ export function Hero() {
     try {
       console.log('Sending extraction request:', { url, description });
       
-      const response = await fetch(`${API_URL}/extract`, {
+      const response = await fetch('/api/browser/extract', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

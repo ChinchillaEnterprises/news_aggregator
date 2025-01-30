@@ -11,8 +11,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-    const response = await fetch(`${API_URL}/extract`, {
+    const response = await fetch('http://3.143.46.45/extract', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
