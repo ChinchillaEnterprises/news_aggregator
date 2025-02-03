@@ -11,7 +11,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const response = await fetch('http://3.143.46.45/render', {
+    const response = await fetch('http://3.143.46.45/api/browser/render', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

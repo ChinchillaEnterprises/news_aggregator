@@ -107,7 +107,7 @@ export function Hero() {
       <div className="max-w-[1800px] mx-auto px-2 py-8">
         <div className="grid grid-cols-2 gap-12">
           {/* Left Column */}
-          <div className="w-[88vh] h-[80vh] flex flex-col">
+          <div className="w-full h-[80vh] flex flex-col">
             <div className="flex gap-2 mb-4">
               <input
                 type="text"
@@ -129,7 +129,7 @@ export function Hero() {
               </button>
             </div>
             
-            <div className="relative w-[88vh] h-[80vh] bg-[#1E1E1E] rounded-lg border border-black/[.08] dark:border-white/[.145] overflow-hidden">
+            <div className="relative w-full flex-1 bg-[#1E1E1E] rounded-lg border border-black/[.08] dark:border-white/[.145] overflow-hidden">
               {isRendering ? (
                 <div className="absolute inset-0 flex items-center justify-center bg-black/50">
                   <Loader2 className="w-8 h-8 animate-spin text-white" />
@@ -170,7 +170,7 @@ export function Hero() {
           </div>
 
           {/* Right Column */}
-          <div className="w-[88vh] h-[80vh] flex flex-col">
+          <div className="w-full h-[80vh] flex flex-col">
             <div className="flex gap-2 mb-4">
               <input
                 type="text"
@@ -192,12 +192,14 @@ export function Hero() {
               </button>
             </div>
 
-            <Terminal
-              status={isExtracting ? 'running' : extractedData ? 'complete' : 'ready'}
-              phase={extractionPhase.toLowerCase()}
-              content={extractedData || error}
-              tokenCount={tokenCount}
-            />
+            <div className="flex-1">
+              <Terminal
+                status={isExtracting ? 'running' : extractedData ? 'complete' : 'ready'}
+                phase={extractionPhase.toLowerCase()}
+                content={extractedData || error}
+                tokenCount={tokenCount}
+              />
+            </div>
           </div>
         </div>
       </div>

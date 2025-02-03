@@ -80,7 +80,7 @@ export default function Terminal({ content, status = 'ready', phase, progress, t
   };
 
   return (
-    <div className="w-[88vh] h-[80vh] flex flex-col rounded-lg border border-black/[.08] dark:border-white/[.145] overflow-hidden bg-[#1E1E1E] shadow-lg">
+    <div className="w-full h-full flex flex-col rounded-lg border border-black/[.08] dark:border-white/[.145] overflow-hidden bg-[#1E1E1E] shadow-lg">
       <div className={`flex-1 p-6 font-mono text-sm overflow-y-auto bg-gradient-to-b from-[#1E1E1E] to-[#252525] ${hasContent ? 'text-white/90' : 'text-white/50 italic'}`}>
         <div className="space-y-4">
           <div className="flex items-center justify-between">
