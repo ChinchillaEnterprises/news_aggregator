@@ -1,0 +1,14 @@
+{
+  "name": "news_aggregator",
+  "version": "1.0.0",
+  "description": "Reddit API integration to fetch hot posts from r/wallstreetbets",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "node-fetch": "^3.3.0",
+    "dotenv": "^16.0.3"
+  }
+}
