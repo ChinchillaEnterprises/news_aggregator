@@ -19,6 +19,8 @@ export async function POST(req: Request) {
       body: JSON.stringify({ url }),
     });
 
+    console.log('Log Response:', response);
+    
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.detail || 'Failed to render page');
